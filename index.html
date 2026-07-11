@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Spotify&trade; 2006 — music for everyone</title>
+<link rel="icon" type="image/png" href="spotifylogo.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,37 +15,29 @@
   <div class="titlebar">
     <button id="navToggle" class="nav-toggle" aria-label="Menu">&#9776;</button>
     <div class="logo">
-      <span class="logo-disc">&#9678;</span>
       SPOTIFY<span class="tm">&trade;</span><span class="ver">2006</span>
     </div>
     <div class="title-tag">your music. your player. no napster lawsuits.</div>
-    <div class="win-dots"><span>_</span><span>&#9633;</span><span>&times;</span></div>
   </div>
 
-  <!-- ===== toolbar with search ===== -->
+  <!-- ===== toolbar: home + centered search, like the real thing ===== -->
   <div class="toolbar">
+    <button id="homeBtn" class="btn btn-chrome tool-home" title="Home" aria-label="Home">&#8962;</button>
     <form id="searchForm" autocomplete="off">
-      <label for="searchInput" class="tool-label">FIND MUSIC:</label>
       <input type="text" id="searchInput" placeholder="artist, song or album..." spellcheck="false">
       <button type="submit" class="btn btn-chrome">SEARCH &raquo;</button>
     </form>
-    <div class="toolbar-right">
-      <span class="led"></span> connected @ 56.6 kbps
-    </div>
   </div>
 
   <!-- ===== 3-column frame: explorer | content | dj console ===== -->
   <div class="frame" id="frame">
 
     <aside class="sidebar" id="sidebar">
-      <div class="side-caption">LIBRARY EXPLORER</div>
+      <div class="side-caption">LIBRARY EXPLORER
+        <button id="navClose" class="drawer-close" aria-label="Close menu">&times;</button>
+      </div>
       <div id="navTree" class="nav-tree"></div>
       <div class="side-fill"></div>
-      <div class="hit-counter">
-        <div class="hc-label">you are visitor no.</div>
-        <div class="hc-digits" id="hitCounter">000000</div>
-      </div>
-      <div class="side-badge">best viewed in<br>1024 &times; 768<br>spotify build 0.91 beta</div>
     </aside>
 
     <div class="splitter" data-side="l" title="drag to resize"></div>
@@ -58,7 +51,8 @@
         <div class="con-avatar">&#9835;</div>
         <div class="con-id">
           <div class="con-name">DJ_Sp1n</div>
-          <div class="con-status"><span class="buddy-dot"></span> <span id="djStatus">&#9835; listening...</span></div>
+          <div class="con-purpose">watches what you play. builds you mixes.</div>
+          <div class="con-status"><span id="djStatus">&#9835; listening...</span></div>
         </div>
         <button id="conClose" class="con-close" aria-label="Close console">&times;</button>
       </div>
@@ -122,6 +116,7 @@
       <button class="btn btn-play" id="playBtn" title="Play/Pause">&#9654;</button>
       <button class="btn btn-chrome" id="nextBtn" title="Next">&#9197;</button>
       <button class="btn btn-chrome btn-toggle" id="shuffleBtn" title="Shuffle">SHFL</button>
+      <button class="btn btn-chrome btn-toggle" id="repeatBtn" title="Repeat queue">RPT</button>
     </div>
 
     <div class="sliders">
@@ -146,9 +141,11 @@
   <span class="vinyl">
     <span class="vinyl-label">DJ</span>
   </span>
-  <span class="buddy-dot"></span>
 </button>
 <button id="buddyBubble" class="buddy-bubble" hidden></button>
+
+<!-- mobile-only: dim backdrop behind an open drawer; tap to close -->
+<div id="drawerScrim" class="drawer-scrim" hidden></div>
 
 <!-- burn dialog (aero cameo) -->
 <div id="burnDialog" class="dialog-backdrop" hidden>
@@ -163,6 +160,17 @@
       <button class="btn btn-chrome" id="burnCancel">Cancel</button>
     </div>
   </div>
+</div>
+
+<!-- flash-style intro: disco ball iframe + enter cta, removed after entry -->
+<div id="introOverlay" class="intro-overlay" hidden>
+  <iframe id="introFrame" title="intro" tabindex="-1"></iframe>
+  <div class="intro-content">
+    <img id="introStill" class="intro-still" src="spotifylogo.png" alt="" hidden>
+    <div class="intro-title">SPOTIFY<span class="tm">&trade;</span> <em>2006</em></div>
+    <div class="intro-tag">your music. your player. no napster lawsuits.</div>
+  </div>
+  <button id="introSkip" class="intro-skip">skip intro &raquo;</button>
 </div>
 
 <audio id="audio" preload="auto"></audio>

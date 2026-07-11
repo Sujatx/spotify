@@ -14,12 +14,17 @@ const state = {
   queue: [],
   idx: -1,
   shuffle: false,
+  repeat: false,
   searchResults: [],
+  searchAlbums: null,   // lazy-loaded per query
+  searchArtists: null,  // lazy-loaded per query
+  searchFilter: 'all',
   lastQuery: '',
   view: 'home',
   chart: [],
   session: [],       // tracks played this session (for BUILD MIX)
   gemIds: new Set(), // hidden-gem track ids (dj comments on these)
+  albumCache: {},    // collectionId -> tracks
 };
 
 const audio = document.getElementById('audio');
@@ -109,6 +114,25 @@ function loadTermSet(key, terms, per = 1) {
 
 const getMixes = () => store.get('sp06_mixes', []);
 const saveMixes = (m) => { store.set('sp06_mixes', m); renderTree(); };
+
+/* ---------------- liked songs ---------------- */
+
+const getLikes = () => store.get('sp06_likes', []);
+const isLiked = (id) => getLikes().some(t => t.id === id);
+
+function toggleLike(t) {
+  let likes = getLikes();
+  if (isLiked(t.id)) {
+    likes = likes.filter(x => x.id !== t.id);
+    setStatus('removed from liked songs.');
+  } else {
+    likes = [t, ...likes];
+    setStatus('liked. good taste.');
+  }
+  store.set('sp06_likes', likes);
+  renderTree();
+  if (state.view === 'liked') renderView();
+}
 
 /* ---------------- formatting ---------------- */
 
@@ -200,7 +224,7 @@ const TREND_SEED = [
 const ICON_DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9BD1F5"/><stop offset="1" stop-color="#2E7CC4"/></linearGradient>
 <linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9FA6A"/><stop offset="1" stop-color="#5BA30F"/></linearGradient>
-<linearGradient id="gPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9CC8"/><stop offset="1" stop-color="#E03A88"/></linearGradient>
+<linearGradient id="gRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9C9C"/><stop offset="1" stop-color="#C42A3A"/></linearGradient>
 <linearGradient id="gSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2F4F6"/><stop offset="1" stop-color="#9BA3AB"/></linearGradient>
 <linearGradient id="gManila" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE9A8"/><stop offset="1" stop-color="#D9A845"/></linearGradient>
 <radialGradient id="gDisc" cx="0.5" cy="0.4" r="0.7"><stop offset="0" stop-color="#F8FAFC"/><stop offset="1" stop-color="#8FA0AC"/></radialGradient>
@@ -214,7 +238,9 @@ const SVG_ICONS = {
   artists: '<circle cx="8" cy="4.8" r="2.9" fill="url(#gBlue)" stroke="#17456F" stroke-width=".6"/><path d="M2.6 14c.5-3.4 2.8-4.9 5.4-4.9s4.9 1.5 5.4 4.9Z" fill="url(#gBlue)" stroke="#17456F" stroke-width=".6"/>',
   albums: '<circle cx="8" cy="8" r="6.2" fill="url(#gDisc)" stroke="#66727C" stroke-width=".7"/><circle cx="8" cy="8" r="1.6" fill="#FFF" stroke="#66727C" stroke-width=".6"/>',
   playlists: '<rect x="2" y="2.6" width="12" height="2.2" rx="1" fill="url(#gGreen)" stroke="#2E6A08" stroke-width=".5"/><rect x="2" y="6.9" width="12" height="2.2" rx="1" fill="url(#gGreen)" stroke="#2E6A08" stroke-width=".5"/><rect x="2" y="11.2" width="8" height="2.2" rx="1" fill="url(#gGreen)" stroke="#2E6A08" stroke-width=".5"/>',
-  mixcd: '<circle cx="8" cy="8" r="6.2" fill="url(#gDisc)" stroke="#B02A68" stroke-width=".8"/><circle cx="8" cy="8" r="3.4" fill="none" stroke="#FF5CA8" stroke-width="1"/><circle cx="8" cy="8" r="1.5" fill="#FFF" stroke="#B02A68" stroke-width=".5"/>',
+  mixcd: '<circle cx="8" cy="8" r="6.2" fill="url(#gDisc)" stroke="#2E6A08" stroke-width=".8"/><circle cx="8" cy="8" r="3.4" fill="none" stroke="#5BA30F" stroke-width="1"/><circle cx="8" cy="8" r="1.5" fill="#FFF" stroke="#2E6A08" stroke-width=".5"/>',
+  liked: '<path d="M8 13.6C4.1 10.3 1.9 8 1.9 5.6c0-1.7 1.3-3 3-3 1.2 0 2.4.7 3.1 1.9C8.7 3.3 9.9 2.6 11.1 2.6c1.7 0 3 1.3 3 3 0 2.4-2.2 4.7-6.1 8Z" fill="url(#gRed)" stroke="#8A1A2A" stroke-width=".7"/>',
+  queue: '<rect x="2" y="2.6" width="8.5" height="2" rx="1" fill="url(#gSilver)" stroke="#66727C" stroke-width=".5"/><rect x="2" y="7" width="8.5" height="2" rx="1" fill="url(#gSilver)" stroke="#66727C" stroke-width=".5"/><rect x="2" y="11.4" width="8.5" height="2" rx="1" fill="url(#gSilver)" stroke="#66727C" stroke-width=".5"/><path d="M12 6.8 15 9l-3 2.2Z" fill="url(#gGreen)" stroke="#2E6A08" stroke-width=".6"/>',
   radio: '<path d="M8 1.6v5.6" stroke="#2E6A08" stroke-width="1.3"/><circle cx="8" cy="8.6" r="1.4" fill="url(#gGreen)" stroke="#2E6A08" stroke-width=".5"/><path d="M4.4 12.2a5.1 5.1 0 0 1 0-7.2M11.6 5a5.1 5.1 0 0 1 0 7.2" stroke="#5BA30F" fill="none" stroke-width="1.2" stroke-linecap="round"/>',
   downloads: '<path d="M8 1.8v7M5 6l3 3.2L11 6" stroke="#2E6A08" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M2.5 11.2h11v2.8h-11z" fill="url(#gSilver)" stroke="#66727C" stroke-width=".6"/>',
 };
@@ -230,6 +256,8 @@ function icon(name) {
 const NAV_TREE = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'search', label: 'Search', icon: 'search' },
+  { id: 'liked', label: 'Liked Songs', icon: 'liked' },
+  { id: 'queue', label: 'Up Next', icon: 'queue' },
   { id: 'library', label: 'Library', icon: 'library', children: [
     { id: 'songs', label: 'Songs', icon: 'songs' },
     { id: 'artists', label: 'Artists', icon: 'artists' },
@@ -248,6 +276,8 @@ function treeNode(n, depth) {
   const open = treeOpen[n.id] !== false; // default open
   let count = '';
   if (n.id === 'mixcds') count = '<span class="tree-count">(' + getMixes().length + ')</span>';
+  if (n.id === 'liked' && getLikes().length) count = '<span class="tree-count">(' + getLikes().length + ')</span>';
+  if (n.id === 'queue' && state.queue.length) count = '<span class="tree-count">(' + state.queue.length + ')</span>';
   let html = '<button class="tree-row" data-nav="' + n.id + '" style="padding-left:' + (4 + depth * 15) + 'px">'
     + (kids
         ? '<span class="tree-tog" data-tog="' + n.id + '">' + (open ? '−' : '+') + '</span>'
@@ -290,6 +320,7 @@ function setTreeActive() {
   let id = state.view;
   if (id.startsWith('mix:')) id = 'mixcds';
   if (id.startsWith('pl:')) id = 'playlists';
+  if (id.startsWith('album:')) id = 'search';
   document.querySelectorAll('.tree-row').forEach(r =>
     r.classList.toggle('active', r.dataset.nav === id));
 }
@@ -342,6 +373,7 @@ function initSplitters() {
 function playQueue(tracks, startIdx) {
   state.queue = tracks.slice();
   state.idx = startIdx;
+  renderTree(); // up-next count
   playCurrent();
 }
 
@@ -375,6 +407,9 @@ function next(manual = false) {
     let n;
     do { n = Math.floor(Math.random() * state.queue.length); } while (n === state.idx);
     state.idx = n;
+  } else if (!manual && !state.repeat && state.idx === state.queue.length - 1) {
+    setStatus('end of queue. repeat is off.');
+    return;
   } else {
     state.idx = (state.idx + 1) % state.queue.length;
   }
@@ -411,6 +446,11 @@ $('#shuffleBtn').addEventListener('click', (e) => {
   state.shuffle = !state.shuffle;
   e.currentTarget.classList.toggle('on', state.shuffle);
   setStatus('shuffle ' + (state.shuffle ? 'ON — chaos mode' : 'off'));
+});
+$('#repeatBtn').addEventListener('click', (e) => {
+  state.repeat = !state.repeat;
+  e.currentTarget.classList.toggle('on', state.repeat);
+  setStatus('repeat ' + (state.repeat ? 'ON — round and round' : 'off'));
 });
 
 let seekDragging = false;
@@ -452,12 +492,6 @@ function addRecent(t) {
   store.set('sp06_recent', recent);
 }
 
-(function hitCounter() {
-  const hits = store.get('sp06_hits', 4211) + 1;
-  store.set('sp06_hits', hits);
-  $('#hitCounter').textContent = String(hits).padStart(6, '0');
-})();
-
 /* ============================================================
    views
    ============================================================ */
@@ -469,7 +503,7 @@ function nav(name) {
   setTreeActive();
   // mobile: picking something closes the drawer
   if (window.matchMedia('(max-width: 900px)').matches) {
-    $('#sidebar').classList.remove('open');
+    closeDrawers();
   }
   renderView();
 }
@@ -478,6 +512,9 @@ function renderView() {
   const v = state.view;
   if (v === 'home') renderHome();
   else if (v === 'search') renderSearch();
+  else if (v === 'liked') renderLiked();
+  else if (v === 'queue') renderQueue();
+  else if (v.startsWith('album:')) renderAlbumDetail(v.slice(6));
   else if (v === 'songs') renderSongs();
   else if (v === 'artists') renderArtists();
   else if (v === 'albums') renderAlbums();
@@ -502,6 +539,7 @@ function trackTable(tracks, opts = {}) {
       <td class="t-time">${fmtTime(t.ms / 1000)}</td>
       <td class="t-actions">
         <button class="btn-row" data-act="play" data-i="${i}">&#9654;</button>
+        <button class="btn-row heart ${isLiked(t.id) ? 'on' : ''}" data-act="like" data-i="${i}" title="Like">&hearts;</button>
         ${opts.removable
           ? `<button class="btn-row pink" data-act="remove" data-i="${i}" title="Remove">&times;</button>`
           : `<button class="btn-row pink" data-act="add" data-i="${i}" title="Add to a Mix CD">+CD</button>`}
@@ -524,6 +562,10 @@ function bindTableActions(container, tracks, opts = {}) {
       const i = Number(btn.dataset.i);
       const act = btn.dataset.act;
       if (act === 'play') playQueue(tracks, i);
+      else if (act === 'like') {
+        toggleLike(tracks[i]);
+        btn.classList.toggle('on', isLiked(tracks[i].id));
+      }
       else if (act === 'add') promptAddToMix(tracks[i]);
       else if (act === 'remove' && opts.onRemove) opts.onRemove(i);
     });
@@ -624,13 +666,52 @@ function renderHome() {
   })();
 }
 
-/* ---- search ---- */
+/* ---- search: chips (all / songs / albums / artists) ---- */
+
+$('#homeBtn').addEventListener('click', () => nav('home'));
+
+async function searchAlbumsApi(term) {
+  const url = 'https://itunes.apple.com/search?media=music&entity=album'
+    + '&limit=12&term=' + encodeURIComponent(term);
+  const data = await jsonp(url);
+  return (data.results || []).map(r => ({
+    id: r.collectionId,
+    name: r.collectionName,
+    artist: r.artistName,
+    art: (r.artworkUrl100 || '').replace('100x100', '300x300'),
+    count: r.trackCount,
+    year: (r.releaseDate || '').slice(0, 4),
+  }));
+}
+
+async function searchArtistsApi(term) {
+  const url = 'https://itunes.apple.com/search?media=music&entity=musicArtist'
+    + '&limit=12&term=' + encodeURIComponent(term);
+  const data = await jsonp(url);
+  return (data.results || []).map(r => ({
+    name: r.artistName,
+    genre: r.primaryGenreName || 'music',
+  }));
+}
+
+async function albumTracks(albumId) {
+  if (state.albumCache[albumId]) return state.albumCache[albumId];
+  const data = await jsonp('https://itunes.apple.com/lookup?id=' + albumId + '&entity=song&limit=30');
+  const tracks = (data.results || [])
+    .filter(r => r.wrapperType === 'track' && r.previewUrl)
+    .map(normalizeTrack);
+  state.albumCache[albumId] = tracks;
+  return tracks;
+}
 
 $('#searchForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const q = $('#searchInput').value.trim();
   if (!q) return;
   state.lastQuery = q;
+  state.searchFilter = 'all';
+  state.searchAlbums = null;
+  state.searchArtists = null;
   nav('search');
   if (/\bparty\b/i.test(q)) observe(['say less.']);
   setStatus('searching for "' + q + '"...');
@@ -644,23 +725,232 @@ $('#searchForm').addEventListener('submit', async (e) => {
   if (state.view === 'search') renderSearch();
 });
 
+const SEARCH_CHIPS = [['all', 'ALL'], ['songs', 'SONGS'], ['albums', 'ALBUMS'], ['artists', 'ARTISTS']];
+
 function renderSearch() {
   if (!state.lastQuery) {
     view.innerHTML = `
       <h2>SEARCH</h2>
-      <p class="view-sub">type something in the FIND MUSIC box up top. anything. we dare you.</p>
+      <p class="view-sub">type something in the search box up top. anything. we dare you.</p>
       <div class="empty-note">[ no search yet ]</div>`;
     return;
   }
   view.innerHTML = `
     <h2>RESULTS: <span class="zap">"${esc(state.lastQuery.toUpperCase())}"</span></h2>
-    <p class="view-sub">${state.searchResults.length} tracks &middot; 30-second previews</p>
-    <div id="resultsTable">${state.searchResults.length ? '' : '<div class="loading">searching</div>'}</div>`;
-  if (state.searchResults.length) {
-    const rt = $('#resultsTable');
-    rt.innerHTML = trackTable(state.searchResults);
-    bindTableActions(rt, state.searchResults);
+    <div class="chip-row">
+      ${SEARCH_CHIPS.map(([id, label]) =>
+        `<button class="chip ${state.searchFilter === id ? 'on' : ''}" data-chip="${id}">${label}</button>`).join('')}
+    </div>
+    <div id="searchBody"><div class="loading">searching</div></div>`;
+  view.querySelectorAll('[data-chip]').forEach(c =>
+    c.addEventListener('click', () => {
+      state.searchFilter = c.dataset.chip;
+      renderSearch();
+    }));
+  renderSearchBody();
+}
+
+function topResultHtml(t) {
+  return `
+    <div class="top-result" id="topResult">
+      <img src="${esc(t.art)}" alt="">
+      <div class="tr-body">
+        <div class="tr-name">${esc(t.name)}</div>
+        <div class="tr-sub">SONG &middot; ${esc(t.artist)}</div>
+        <div class="tr-btns">
+          <button class="btn-row" data-top="play">&#9654; PLAY</button>
+          <button class="btn-row heart ${isLiked(t.id) ? 'on' : ''}" data-top="like">&hearts;</button>
+          <button class="btn-row pink" data-top="add">+CD</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function renderSearchBody() {
+  const el = $('#searchBody');
+  if (!el) return;
+  const f = state.searchFilter;
+
+  if (f === 'all' || f === 'songs') {
+    const tracks = state.searchResults;
+    if (!tracks.length) {
+      el.innerHTML = '<div class="empty-note">[ nothing found — check the spelling? ]</div>';
+      return;
+    }
+    if (f === 'songs') {
+      el.innerHTML = trackTable(tracks);
+      bindTableActions(el, tracks);
+      return;
+    }
+    const top = tracks[0];
+    el.innerHTML = topResultHtml(top) + '<div id="allSongs"></div>';
+    el.querySelectorAll('[data-top]').forEach(b =>
+      b.addEventListener('click', () => {
+        const act = b.dataset.top;
+        if (act === 'play') playQueue(tracks, 0);
+        else if (act === 'like') { toggleLike(top); b.classList.toggle('on', isLiked(top.id)); }
+        else if (act === 'add') promptAddToMix(top);
+      }));
+    const rest = tracks.slice(0, 10);
+    const songsEl = $('#allSongs');
+    songsEl.innerHTML = trackTable(rest);
+    bindTableActions(songsEl, rest);
+    return;
   }
+
+  if (f === 'albums') {
+    el.innerHTML = '<div class="loading">digging</div>';
+    try {
+      if (!state.searchAlbums) state.searchAlbums = await searchAlbumsApi(state.lastQuery);
+    } catch { state.searchAlbums = []; }
+    if (state.view !== 'search' || state.searchFilter !== 'albums') return;
+    const albums = state.searchAlbums;
+    if (!albums.length) {
+      el.innerHTML = '<div class="empty-note">[ no albums found ]</div>';
+      return;
+    }
+    el.innerHTML = '<div class="cover-strip">' + albums.map((a, i) => `
+      <button class="cover" data-i="${i}">
+        <img src="${esc(a.art)}" alt="" loading="lazy">
+        <div class="c-name">${esc(a.name)}</div>
+        <div class="c-artist">${esc(a.artist)}${a.year ? ' &middot; ' + a.year : ''}</div>
+      </button>`).join('') + '</div>';
+    el.querySelectorAll('.cover').forEach(c =>
+      c.addEventListener('click', () => {
+        const a = albums[Number(c.dataset.i)];
+        state.curAlbum = a;
+        state.view = 'album:' + a.id;
+        setTreeActive();
+        renderView();
+      }));
+    return;
+  }
+
+  if (f === 'artists') {
+    el.innerHTML = '<div class="loading">digging</div>';
+    try {
+      if (!state.searchArtists) state.searchArtists = await searchArtistsApi(state.lastQuery);
+    } catch { state.searchArtists = []; }
+    if (state.view !== 'search' || state.searchFilter !== 'artists') return;
+    const artists = state.searchArtists;
+    if (!artists.length) {
+      el.innerHTML = '<div class="empty-note">[ no artists found ]</div>';
+      return;
+    }
+    el.innerHTML = '<div class="pl-grid">' + artists.map((a, i) => `
+      <button class="pl-card" data-i="${i}">
+        <div class="pl-name">${esc(a.name)}</div>
+        <div class="pl-desc">ARTIST &middot; ${esc(a.genre.toLowerCase())}</div>
+      </button>`).join('') + '</div>';
+    el.querySelectorAll('.pl-card').forEach(c =>
+      c.addEventListener('click', async () => {
+        const a = artists[Number(c.dataset.i)];
+        state.lastQuery = a.name;
+        state.searchFilter = 'songs';
+        setStatus('loading ' + a.name + '...');
+        try { state.searchResults = await searchTracks(a.name); } catch { state.searchResults = []; }
+        if (state.view === 'search') renderSearch();
+      }));
+  }
+}
+
+async function renderAlbumDetail(idStr) {
+  const a = state.curAlbum && String(state.curAlbum.id) === idStr ? state.curAlbum : null;
+  view.innerHTML = `
+    <h2><span class="zap">&#9678;</span> ${a ? esc(a.name.toUpperCase()) : 'ALBUM'}</h2>
+    <p class="view-sub">${a ? esc(a.artist) + (a.year ? ' &middot; ' + a.year : '') + ' &middot; ' : ''}
+      <button class="btn-row" id="albPlayAll">&#9654; PLAY ALL</button>
+      <button class="btn-row" id="albBack">&laquo; BACK TO RESULTS</button></p>
+    <div id="albTable"><div class="loading">loading tracklist</div></div>`;
+  $('#albBack').addEventListener('click', () => nav('search'));
+  try {
+    const tracks = await albumTracks(idStr);
+    if (state.view !== 'album:' + idStr) return;
+    const el = $('#albTable');
+    if (!tracks.length) {
+      el.innerHTML = '<div class="empty-note">[ no previews available for this one ]</div>';
+      return;
+    }
+    el.innerHTML = trackTable(tracks);
+    bindTableActions(el, tracks);
+    $('#albPlayAll').addEventListener('click', () => playQueue(tracks, 0));
+  } catch {
+    const el = $('#albTable');
+    if (el) el.innerHTML = '<div class="empty-note">modem trouble. refresh?</div>';
+  }
+}
+
+/* ---- liked songs ---- */
+
+function renderLiked() {
+  const likes = getLikes();
+  view.innerHTML = `
+    <h2><span class="zap">&hearts;</span> LIKED SONGS</h2>
+    <p class="view-sub">${likes.length} song${likes.length === 1 ? '' : 's'} you couldn't leave alone
+      ${likes.length ? '&middot; <button class="btn-row" id="likedPlayAll">&#9654; PLAY ALL</button>' : ''}</p>
+    <div id="likedTable">${likes.length ? '' : '<div class="empty-note">[ nothing liked yet — hit the &hearts; on any track ]</div>'}</div>`;
+  if (!likes.length) return;
+  $('#likedPlayAll').addEventListener('click', () => playQueue(likes, 0));
+  const el = $('#likedTable');
+  el.innerHTML = trackTable(likes);
+  bindTableActions(el, likes);
+}
+
+/* ---- up next (queue) ---- */
+
+function renderQueue() {
+  const q = state.queue;
+  view.innerHTML = `
+    <h2><span class="zap">UP NEXT</span></h2>
+    <p class="view-sub">${q.length} in the queue
+      ${q.length ? '&middot; <button class="btn-row pink" id="qClear">CLEAR QUEUE</button>' : ''}</p>
+    <div id="qTable">${q.length ? '' : '<div class="empty-note">[ queue empty — play something ]</div>'}</div>`;
+  if (!q.length) return;
+  $('#qClear').addEventListener('click', () => {
+    const cur = state.queue[state.idx];
+    state.queue = cur ? [cur] : [];
+    state.idx = cur ? 0 : -1;
+    renderTree();
+    renderQueue();
+    setStatus('queue cleared.');
+  });
+  $('#qTable').innerHTML = `
+    <table class="track-table">
+      <thead><tr><th></th><th>SONG</th><th>ARTIST</th><th style="text-align:right">TIME</th><th></th></tr></thead>
+      <tbody>${q.map((t, i) => `
+        <tr class="${i === state.idx ? 'playing' : ''}">
+          <td class="t-art"><img src="${esc(t.art)}" alt="" loading="lazy"></td>
+          <td class="t-name">${esc(t.name)}</td>
+          <td class="t-artist">${esc(t.artist)}</td>
+          <td class="t-time">${fmtTime(t.ms / 1000)}</td>
+          <td class="t-actions">
+            <button class="btn-row" data-act="jump" data-i="${i}">&#9654;</button>
+            ${i > 0 ? `<button class="btn-row" data-act="up" data-i="${i}" title="Move up">&#9650;</button>` : ''}
+            <button class="btn-row pink" data-act="drop" data-i="${i}" title="Remove">&times;</button>
+          </td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+  $('#qTable').querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = Number(btn.dataset.i);
+      const act = btn.dataset.act;
+      if (act === 'jump') {
+        state.idx = i;
+        playCurrent();
+      } else if (act === 'up' && i > 0) {
+        [state.queue[i - 1], state.queue[i]] = [state.queue[i], state.queue[i - 1]];
+        if (state.idx === i) state.idx = i - 1;
+        else if (state.idx === i - 1) state.idx = i;
+        renderQueue();
+      } else if (act === 'drop') {
+        state.queue.splice(i, 1);
+        if (i < state.idx) state.idx--;
+        else if (state.idx >= state.queue.length) state.idx = state.queue.length - 1;
+        renderTree();
+        renderQueue();
+      }
+    });
+  });
 }
 
 /* ---- library: songs / artists / albums ---- */
@@ -1169,6 +1459,7 @@ setInterval(async () => {
       if (more.length) {
         const pick = more[Math.floor(Math.random() * more.length)];
         state.queue.push(pick);
+        renderTree(); // up-next count
         addFound([pick]);
         observe(['queued something', 'you might like.']);
       }
@@ -1546,12 +1837,75 @@ function buddyOnSkip() {
    mobile drawers
    ============================================================ */
 
-$('#navToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+function syncScrim() {
+  const open = $('#sidebar').classList.contains('open')
+    || $('#console').classList.contains('open');
+  $('#drawerScrim').hidden = !open;
+}
+
+function closeDrawers() {
+  $('#sidebar').classList.remove('open');
+  $('#console').classList.remove('open');
+  $('#buddyBubble').hidden = true;
+  syncScrim();
+}
+
+$('#navToggle').addEventListener('click', () => {
+  $('#console').classList.remove('open');       // only one drawer at a time
+  $('#sidebar').classList.toggle('open');
+  syncScrim();
+});
 $('#buddyToggle').addEventListener('click', () => {
+  $('#sidebar').classList.remove('open');
   $('#console').classList.toggle('open');
   $('#buddyBubble').hidden = true;
+  syncScrim();
 });
-$('#conClose').addEventListener('click', () => $('#console').classList.remove('open'));
+$('#navClose').addEventListener('click', closeDrawers);
+$('#conClose').addEventListener('click', closeDrawers);
+$('#drawerScrim').addEventListener('click', closeDrawers);
+
+/* ============================================================
+   intro — disco ball landing, once per session (?intro replays)
+   ============================================================ */
+
+function runIntro() {
+  const ov = $('#introOverlay');
+  const force = new URLSearchParams(location.search).has('intro');
+  let seen = false;
+  try { seen = !!sessionStorage.getItem('sp06_intro'); } catch (e) {}
+
+  if (!ov || (seen && !force)) { djBoot(); return; }
+  try { sessionStorage.setItem('sp06_intro', '1'); } catch (e) {}
+
+  ov.hidden = false;
+  const frame = $('#introFrame');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let done = false;
+  function enter() {
+    if (done) return;
+    done = true;
+    ov.classList.add('intro-out');
+    setTimeout(() => { ov.remove(); djBoot(); }, 1100);
+  }
+
+  if (reduce) {
+    $('#introStill').hidden = false;
+    setTimeout(enter, 1400);
+  } else {
+    let ready = false;
+    window.addEventListener('message', e => { if (e.data === 'disco-ready') ready = true; });
+    frame.src = 'disco.html';
+    // webgl/cdn dead? don't strand the user on a black screen
+    setTimeout(() => { if (!ready) enter(); }, 3500);
+    // pure animation, no cta — it just plays and gets out of the way
+    setTimeout(enter, 2700);
+  }
+
+  $('#introSkip').addEventListener('click', enter);
+  ov.addEventListener('click', enter);
+}
 
 /* ============================================================
    init
@@ -1563,4 +1917,4 @@ renderTree();
 renderFound();
 renderTrending();
 nav('home');
-djBoot();
+runIntro();
