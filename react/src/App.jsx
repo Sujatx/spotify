@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Landing from './landing/Landing';
 import ChromeTheme from './themes/chrome';
 import AeroTheme from './themes/aero';
@@ -13,6 +14,7 @@ function App() {
         <Route path="/aero" element={<AeroTheme />} />
         <Route path="/scrapbook" element={<ScrapbookTheme />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   );
 }
