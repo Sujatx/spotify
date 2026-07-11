@@ -93,9 +93,13 @@
 </div>
 
 <!-- ===== AI buddy IM window (scrapbook zone) ===== -->
-<button id="buddyToggle" class="buddy-toggle">
-  <span class="buddy-dot"></span> DJ_Sp1n is online &middot; IM me!!
+<button id="buddyToggle" class="buddy-toggle" title="DJ_Sp1n is online — IM me!!" aria-label="Chat with DJ_Sp1n">
+  <span class="vinyl">
+    <span class="vinyl-label">DJ</span>
+  </span>
+  <span class="buddy-dot"></span>
 </button>
+<button id="buddyBubble" class="buddy-bubble" hidden></button>
 
 <div id="buddy" class="im-window" hidden>
   <div class="im-titlebar">
@@ -106,15 +110,15 @@
     <div class="im-avatar">&#9835;</div>
     <div>
       <div class="im-name">DJ_Sp1n</div>
-      <div class="im-status">&laquo; ur personal AI mixtape robot &raquo;</div>
+      <div class="im-status">&laquo; resident dj. here since day one. &raquo;</div>
     </div>
   </div>
   <div class="im-log" id="imLog"></div>
   <form class="im-inputrow" id="imForm" autocomplete="off">
-    <input type="text" id="imInput" placeholder="tell me a mood... (emo, party, crush...)" spellcheck="false">
+    <input type="text" id="imInput" placeholder="throw me a mood..." spellcheck="false">
     <button type="submit" class="btn btn-aero">Send</button>
   </form>
-  <div class="im-sticky">tip: say "emo", "party", "crush", "gym", "chill", "angry" or "road trip" &hearts;</div>
+  <div class="im-sticky">try: "emo", "party", "crush", "gym", "chill", "road trip"... or ask him who he is &hearts;</div>
 </div>
 
 <!-- burn dialog -->

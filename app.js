@@ -106,6 +106,7 @@ function playCurrent() {
   audio.play().catch(() => setStatus('click PLAY to start audio.'));
   updateLcd(t);
   addRecent(t);
+  buddyOnPlay(t);
   renderView(); // refresh playing-row highlight
 }
 
@@ -120,8 +121,9 @@ function updateLcd(t) {
   setStatus('now playing: ' + t.name);
 }
 
-function next() {
+function next(manual = false) {
   if (!state.queue.length) return;
+  if (manual) buddyOnSkip();
   if (state.shuffle && state.queue.length > 1) {
     let n;
     do { n = Math.floor(Math.random() * state.queue.length); } while (n === state.idx);
@@ -139,7 +141,7 @@ function prev() {
   playCurrent();
 }
 
-audio.addEventListener('ended', next);
+audio.addEventListener('ended', () => next(false));
 audio.addEventListener('play', () => { $('#playBtn').innerHTML = '&#10073;&#10073;'; });
 audio.addEventListener('pause', () => { $('#playBtn').innerHTML = '&#9654;'; });
 audio.addEventListener('timeupdate', () => {
@@ -157,7 +159,7 @@ $('#playBtn').addEventListener('click', () => {
   }
   audio.paused ? audio.play() : audio.pause();
 });
-$('#nextBtn').addEventListener('click', next);
+$('#nextBtn').addEventListener('click', () => next(true));
 $('#prevBtn').addEventListener('click', prev);
 $('#shuffleBtn').addEventListener('click', (e) => {
   state.shuffle = !state.shuffle;
@@ -346,6 +348,7 @@ $('#searchForm').addEventListener('submit', async (e) => {
   if (!q) return;
   state.lastQuery = q;
   nav('search');
+  if (/\bparty\b/i.test(q)) say(['say less.']);
   setStatus('searching for "' + q + '"...');
   try {
     state.searchResults = await searchTracks(q);
@@ -503,53 +506,89 @@ function promptAddToMix(track) {
 const MOODS = [
   {
     keys: ['emo', 'sad', 'cry', 'rain', 'heartbreak', 'breakup', 'lonely'],
-    reply: "oh no bb :( ok. eyeliner on. here's ur certified tears-on-the-bus mix...",
+    reply: ['oh.', "it's one of those days.", 'got you <3'],
     terms: ['My Chemical Romance Welcome to the Black Parade', 'Dashboard Confessional Vindicated',
             'The Fray How to Save a Life', 'Death Cab for Cutie I Will Follow You Into the Dark'],
     name: 'rainy bus window mix',
   },
   {
     keys: ['party', 'dance', 'club', 'friday', 'weekend', 'birthday'],
-    reply: "PARTY?? say less. cranking these thru ur speakers rn — warn the neighbors!!",
+    reply: ['say less.'],
     terms: ['Sean Paul Temperature', 'Fergie London Bridge',
             'Pussycat Dolls Buttons', 'Justin Timberlake SexyBack'],
     name: 'friday nite burnout',
   },
   {
     keys: ['crush', 'love', 'cute', 'date', 'valentine', 'boyfriend', 'girlfriend'],
-    reply: "omg a CRUSH?? ok ok stay calm. burn them this CD, it works 60% of the time every time <3",
+    reply: ['a crush, huh.', 'burn them this.', 'works more often than it should.'],
     terms: ['Ne-Yo So Sick', 'James Blunt You\'re Beautiful',
             'Mariah Carey We Belong Together', 'Chris Brown Yo Excuse Me Miss'],
     name: 'do u like me y/n',
   },
   {
     keys: ['angry', 'mad', 'rage', 'hate', 'ugh', 'annoyed'],
-    reply: "punch a pillow, not ur monitor. channel it thru THESE >:(",
+    reply: ['punch the pillow.', 'not the monitor.', 'here.'],
     terms: ['Three Days Grace Animal I Have Become', 'Linkin Park What I\'ve Done',
             'Rise Against Prayer of the Refugee', 'System of a Down Hypnotize'],
     name: 'slam ur bedroom door',
   },
   {
     keys: ['chill', 'relax', 'study', 'homework', 'calm', 'sleep', 'coffee'],
-    reply: "vibes = immaculate. lo-fi didn't exist yet so here's the 2006 equivalent ~",
+    reply: ['easy now.', 'sunday speed only.'],
     terms: ['Jack Johnson Better Together', 'Corinne Bailey Rae Put Your Records On',
             'John Mayer Waiting on the World to Change', 'Norah Jones Sunrise'],
     name: 'sunday morning cereal',
   },
   {
     keys: ['gym', 'workout', 'run', 'pump', 'lift', 'sports'],
-    reply: "GET HUGE. protein shake in one hand, mouse in the other. LET'S GO —",
+    reply: ['alright.', 'time to wake the neighbors.'],
     terms: ['Eminem Lose Yourself', '50 Cent In Da Club',
             'Kanye West Gold Digger', 'Black Eyed Peas Pump It'],
     name: 'gym class heroes (not the band)',
   },
   {
     keys: ['road', 'trip', 'drive', 'car', 'highway', 'summer'],
-    reply: "windows down. arm out the window doing the wave thing. here's ur soundtrack:",
+    reply: ['windows down.', 'arm out.', "here's the soundtrack."],
     terms: ['Red Hot Chili Peppers Snow Hey Oh', 'The Killers When You Were Young',
             'All-American Rejects Move Along', 'Boston More Than a Feeling'],
     name: 'shotgun rules apply',
   },
+];
+
+/* things he says when nobody asked */
+const AMBIENT = [
+  ['this song slaps.'],
+  ['that bassline...', "chef's kiss."],
+  ["this one's criminally underrated."],
+  ["didn't think you'd like this one.", 'guess i was wrong.'],
+  ["you've got expensive taste."],
+  ['this mix is shaping up nicely.'],
+  ['there it is.', "knew we'd find it."],
+];
+
+/* he is definitely not an ai */
+const EGGS = [
+  { re: /who\s+(are|r)\s+(you|u)/i,
+    lines: ['just your neighborhood dj.', "don't tell the engineers i can talk."] },
+  { re: /(are|r)\s+(you|u)\s+(an?\s+)?(ai|a\.i\.|bot|robot|chatgpt|gpt|llm)/i,
+    lines: ['nah.', "i'm mostly caffeine and playlists."] },
+  { re: /what\s+do\s+(you|u)\s+do/i,
+    lines: ["i find songs you'll pretend you discovered yourself."] },
+  { re: /^(yo|hi|hey|hello|sup|wassup|what'?s up)\b/i,
+    lines: ['yo.', "what's the vibe?"] },
+  { re: /(thank|thx|ty)\b/i,
+    lines: ['anytime.', "that's what i'm here for... allegedly."] },
+];
+
+/* fake 2006 software doing fake 2006 things */
+const PROCESS_STEPS = [
+  'digging through the crates...',
+  'loading music dna...',
+  'reading id3 tags...',
+  'checking bpm...',
+  'matching artists...',
+  'finding hidden gems...',
+  'building mix cd...',
 ];
 
 const imLog = $('#imLog');
@@ -564,10 +603,32 @@ function imMsg(who, html, cls) {
   return div;
 }
 
+/* say(): everything he says goes through here — into the IM log,
+   and into a speech bubble by the vinyl when the window is closed */
+function say(lines, opts = {}) {
+  const div = imMsg('DJ_Sp1n', lines.join('<br>'), 'bot');
+  if (buddyWin.hidden && !opts.quiet) showBubble(lines);
+  return div;
+}
+
+let bubbleTimer = null;
+function showBubble(lines) {
+  const b = $('#buddyBubble');
+  b.innerHTML = lines.join('<br>');
+  b.hidden = false;
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(() => { b.hidden = true; }, 5200);
+}
+$('#buddyBubble').addEventListener('click', () => {
+  $('#buddyBubble').hidden = true;
+  buddyWin.hidden = false;
+});
+
 $('#buddyToggle').addEventListener('click', () => {
   buddyWin.hidden = !buddyWin.hidden;
+  $('#buddyBubble').hidden = true;
   if (!buddyWin.hidden && !imLog.children.length) {
-    imMsg('DJ_Sp1n', "yo!! welcome 2 spotify. i'm ur AI mixtape robot &#9835; tell me a mood or a vibe and i'll build u a mix. try: <i>\"emo\"</i>, <i>\"party\"</i>, <i>\"crush\"</i>...", 'bot');
+    say(['yo.', 'what are we listening to today?'], { quiet: true });
   }
 });
 $('#buddyClose').addEventListener('click', () => { buddyWin.hidden = true; });
@@ -581,34 +642,58 @@ $('#imForm').addEventListener('submit', async (e) => {
   await buddyRespond(text);
 });
 
-async function buddyRespond(text) {
-  const typing = imMsg('DJ_Sp1n', 'is typing...', 'bot typing');
-  const lower = text.toLowerCase();
-  const mood = MOODS.find(m => m.keys.some(k => lower.includes(k)));
+/* the 2006-software theater: cycle status lines while the real fetch runs */
+async function runProcess(statusDiv, fetchPromise) {
+  for (const step of PROCESS_STEPS) {
+    statusDiv.innerHTML = '<span class="who">DJ_Sp1n:</span> <i>' + step + '</i>';
+    imLog.scrollTop = imLog.scrollHeight;
+    await new Promise(r => setTimeout(r, 300 + Math.random() * 200));
+  }
+  const tracks = await fetchPromise;
+  statusDiv.innerHTML = '<span class="who">DJ_Sp1n:</span> <i>done.</i>';
+  await new Promise(r => setTimeout(r, 400));
+  statusDiv.remove();
+  return tracks;
+}
 
-  // small human-feeling delay — DJ_Sp1n types with two fingers
-  await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
+async function buddyRespond(text) {
+  const lower = text.toLowerCase();
+
+  // small talk & things he will never admit
+  const egg = EGGS.find(e => e.re.test(text));
+  if (egg) {
+    const t = imMsg('DJ_Sp1n', '...', 'bot typing');
+    await new Promise(r => setTimeout(r, 700));
+    t.remove();
+    say(egg.lines, { quiet: true });
+    return;
+  }
+
+  const mood = MOODS.find(m => m.keys.some(k => lower.includes(k)));
+  let reply, mixName, fetchPromise;
+  if (mood) {
+    reply = mood.reply;
+    mixName = mood.name;
+    fetchPromise = Promise.all(mood.terms.map(t => searchTracks(t, 2).catch(() => [])))
+      .then(r => dedupe(r.flat()).slice(0, 8));
+  } else {
+    reply = ['hm.', 'digging for that the old-fashioned way...'];
+    mixName = text.slice(0, 24) + ' mix';
+    fetchPromise = searchTracks(text, 8);
+  }
+
+  say(reply, { quiet: true });
+  const status = imMsg('DJ_Sp1n', '', 'bot typing');
 
   try {
-    let tracks, reply, mixName;
-    if (mood) {
-      reply = mood.reply;
-      mixName = mood.name;
-      const results = await Promise.all(mood.terms.map(t => searchTracks(t, 2).catch(() => [])));
-      tracks = dedupe(results.flat()).slice(0, 8);
-    } else {
-      reply = 'hmm idk that mood... searching "' + esc(text) + '" the old fashioned way &#9749;';
-      mixName = text.slice(0, 24) + ' mix';
-      tracks = (await searchTracks(text, 8));
-    }
-    typing.remove();
+    const tracks = await runProcess(status, fetchPromise);
 
     if (!tracks.length) {
-      imMsg('DJ_Sp1n', "bruh my modem dropped :( try again in a sec", 'bot');
+      say(['crates came up empty.', 'try different words?'], { quiet: true });
       return;
     }
 
-    const msg = imMsg('DJ_Sp1n', reply, 'bot');
+    const msg = say(['got something.', 'trust me.'], { quiet: true });
     const list = document.createElement('div');
     list.className = 'im-tracklist';
     list.innerHTML = tracks.map(t => '&#9835; ' + esc(t.name) + ' — ' + esc(t.artist)).join('<div></div>');
@@ -627,16 +712,77 @@ async function buddyRespond(text) {
       const mixes = getMixes();
       mixes.push({ name: mixName, tracks });
       saveMixes(mixes);
-      burnBtn.textContent = '✓ BURNED!';
+      burnBtn.textContent = '✓ BURNED';
       burnBtn.disabled = true;
-      imMsg('DJ_Sp1n', 'burned as <b>"' + esc(mixName) + '"</b> — check MY MIX CDs &#9678;', 'bot');
+      say(['burned.', '"' + esc(mixName) + '" is in my mix cds.', "don't scratch it."], { quiet: true });
     });
     actions.append(playBtn, burnBtn);
     msg.appendChild(actions);
     imLog.scrollTop = imLog.scrollHeight;
   } catch {
-    typing.remove();
-    imMsg('DJ_Sp1n', 'AOL kicked me off!! (network error) — try again', 'bot');
+    status.remove();
+    say(['modem dropped.', 'try again in a sec.'], { quiet: true });
+  }
+}
+
+/* ============ he watches the player. lovingly. ============ */
+
+const buddyState = {
+  lastTrackId: null,
+  loopStreak: 0,
+  skipTimes: [],
+  lastAmbient: 0,
+  saidLateNight: false,
+};
+
+function buddyOnPlay(t) {
+  // looping one song
+  if (t.id === buddyState.lastTrackId) {
+    buddyState.loopStreak++;
+    if (buddyState.loopStreak === 2) { say(['again?', 'respect.']); return; }
+  } else {
+    buddyState.loopStreak = 1;
+    buddyState.lastTrackId = t.id;
+  }
+
+  // play counts (persistent)
+  const counts = store.get('sp06_playcounts', {});
+  counts[t.id] = (counts[t.id] || 0) + 1;
+  store.set('sp06_playcounts', counts);
+  if (counts[t.id] === 5) {
+    say(["you've played", '"' + esc(t.name.toLowerCase()) + '" 5 times this week.', 'rough week?']);
+    return;
+  }
+  if (counts[t.id] === 17) {
+    say(['17 times.', 'i counted.', 'do we need to talk?']);
+    return;
+  }
+
+  // late night listening
+  const now = new Date();
+  const h = now.getHours();
+  if (!buddyState.saidLateNight && h >= 0 && h < 5) {
+    buddyState.saidLateNight = true;
+    const hh = h === 0 ? 12 : h;
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    say([hh + ':' + mm + ' am?', 'yeah...', "this one's made for nights like this."]);
+    return;
+  }
+
+  // unprompted commentary, occasionally
+  if (Date.now() - buddyState.lastAmbient > 120000 && Math.random() < 0.22) {
+    buddyState.lastAmbient = Date.now();
+    say(AMBIENT[Math.floor(Math.random() * AMBIENT.length)]);
+  }
+}
+
+function buddyOnSkip() {
+  const now = Date.now();
+  buddyState.skipTimes = buddyState.skipTimes.filter(ts => now - ts < 30000);
+  buddyState.skipTimes.push(now);
+  if (buddyState.skipTimes.length >= 5) {
+    buddyState.skipTimes = [];
+    say(['alright...', 'tough crowd today.']);
   }
 }
 

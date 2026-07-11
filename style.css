@@ -64,15 +64,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--acid); outl
 /* ============ app shell ============ */
 
 #app {
-  max-width: 1100px;
-  margin: 14px auto;
-  border: 1px solid #3A423A;
-  border-radius: 8px;
+  width: 100%;
+  margin: 0;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 0 1px #000;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 28px);
+  height: 100vh;
   min-height: 560px;
   background: var(--panel);
 }
@@ -583,36 +580,98 @@ tr.playing .t-artist, tr.playing .t-album { color: #7AB030; }
 
 .buddy-toggle {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  right: 22px;
+  bottom: 108px;
   z-index: 40;
-  background: linear-gradient(180deg, #FF9CC8 0%, #FF5CA8 48%, #E03A88 52%, #FF7AB6 100%);
-  border: 2px solid var(--sharpie);
-  border-radius: 20px;
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+}
+.vinyl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--bubblegum);
+  /* vinyl grooves */
+  background: repeating-radial-gradient(circle at center,
+    #1E1E1E 0 2px, #0A0A0A 2px 4px);
+  box-shadow: 0 5px 16px rgba(0,0,0,0.75), 0 0 14px rgba(255,92,168,0.4);
+  animation: vinylspin 2.4s linear infinite;
+}
+.buddy-toggle:hover .vinyl { animation-duration: 0.9s; box-shadow: 0 5px 16px rgba(0,0,0,0.75), 0 0 22px rgba(255,92,168,0.7); }
+.buddy-toggle:active .vinyl { transform: scale(0.94); }
+@keyframes vinylspin { from { rotate: 0deg; } to { rotate: 360deg; } }
+.vinyl-label {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #FF9CC8, #FF5CA8);
+  border: 1px solid var(--sharpie);
   color: #FFF;
   font-family: var(--font-scrap);
   font-size: 12px;
   font-weight: bold;
-  padding: 8px 16px;
-  box-shadow: 3px 4px 0 rgba(0,0,0,0.6);
-  text-shadow: 0 1px 1px rgba(120,0,60,0.5);
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  text-shadow: 0 1px 1px rgba(120,0,60,0.6);
 }
-.buddy-toggle:active { transform: translate(1px, 1px); box-shadow: 2px 3px 0 rgba(0,0,0,0.6); }
 .buddy-dot {
-  width: 9px; height: 9px;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 12px; height: 12px;
   border-radius: 50%;
   background: #6DFF6D;
-  border: 1px solid #0A5A0A;
-  box-shadow: 0 0 5px rgba(109,255,109,0.8);
+  border: 2px solid #0A5A0A;
+  box-shadow: 0 0 6px rgba(109,255,109,0.9);
+}
+
+.buddy-bubble {
+  position: fixed;
+  right: 98px;
+  bottom: 118px;
+  z-index: 45;
+  max-width: 210px;
+  background: var(--paper);
+  border: 2px solid var(--sharpie);
+  box-shadow: 3px 4px 0 rgba(0,0,0,0.6);
+  padding: 8px 12px;
+  font-family: var(--font-scrap);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sharpie);
+  text-align: left;
+  cursor: pointer;
+  animation: bubblepop 0.18s ease-out;
+}
+.buddy-bubble::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  bottom: 14px;
+  width: 10px;
+  height: 10px;
+  background: var(--paper);
+  border-right: 2px solid var(--sharpie);
+  border-top: 2px solid var(--sharpie);
+  transform: rotate(45deg);
+}
+@keyframes bubblepop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
 .im-window {
   position: fixed;
-  right: 18px;
-  bottom: 64px;
+  right: 22px;
+  bottom: 184px;
   z-index: 50;
   width: 320px;
   max-width: calc(100vw - 36px);
@@ -775,11 +834,64 @@ tr.playing .t-artist, tr.playing .t-album { color: #7AB030; }
   border-radius: 6px;
 }
 
+/* ============ mobile: desktop window becomes an app ============ */
+
 @media (max-width: 760px) {
-  .sidebar { display: none; }
-  .sliders { display: none; }
-  .player-art { display: none; }
+  /* no window chrome on a phone — it's an app now */
+  .win-dots { display: none; }
   .title-tag { display: none; }
+  .toolbar-right { display: none; }
+  .tool-label { display: none; }
+  .logo { font-size: 13px; }
+
+  /* sidebar -> horizontal nav strip */
+  .frame { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-right: none;
+    border-bottom: 1px solid #000;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .side-section { display: flex; flex-direction: row; align-items: center; gap: 4px; }
+  .side-section:first-child .side-head { display: none; }
+  .side-head { margin-bottom: 0; white-space: nowrap; gap: 6px; }
+  .side-link { white-space: nowrap; font-size: 10px; padding: 5px 8px; width: auto; }
+  .side-mixes, .side-fill, .hit-counter, .side-badge { display: none; }
+
+  .view { padding: 12px 14px; }
+  .view h2 { font-size: 16px; }
+  .chart-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; }
+
+  /* track table: drop album + time columns */
+  .track-table th:nth-child(4), .track-table td.t-album,
+  .track-table th:nth-child(5), .track-table td.t-time { display: none; }
+  .track-table td, .track-table th { padding: 5px 4px; }
+  .t-actions { width: auto; }
+  .btn-row { padding: 4px 7px; font-size: 9px; }
+
+  /* player: LCD on top, controls below */
+  .player { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+  .lcd { flex: 1 1 100%; order: 1; }
+  .transport { order: 2; }
+  .sliders { order: 3; flex: 1; width: auto; min-width: 0; }
+  .vol-row { display: none; }   /* phones have volume buttons */
+  .player-art { display: none; }
+
+  .statusbar span:first-child { display: none; }
+
+  /* floating bits sit above the taller stacked player */
+  .buddy-toggle { width: 56px; height: 56px; right: 12px; bottom: 150px; }
+  .vinyl-label { width: 24px; height: 24px; font-size: 10px; }
+  .buddy-bubble { right: 76px; bottom: 156px; max-width: 180px; }
+  .im-window { right: 12px; bottom: 214px; max-width: calc(100vw - 24px); }
+  .im-log { height: 170px; }
+  .dialog { width: calc(100vw - 32px); max-width: 340px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
