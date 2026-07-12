@@ -395,7 +395,7 @@
 .theme-aero .buddy-toggle:hover { transform: scale(1.06); }
 .theme-aero .buddy-window {
   position: fixed; right: 18px; bottom: 164px; z-index: 61; width: 300px; display: none; flex-direction: column; overflow: hidden;
-  background: var(--glass-bg-strong); backdrop-filter: blur(var(--blur-strong)); border: 1px solid var(--glass-border);
+  background: rgba(14,42,82,.82); backdrop-filter: blur(var(--blur-strong)); border: 1px solid var(--glass-border);
   border-radius: 14px 14px 8px 8px; box-shadow: 0 10px 26px rgba(0,0,0,.3);
 }
 .theme-aero .buddy-window.show { display: flex; }
