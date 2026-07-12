@@ -83,8 +83,8 @@ The AI DJ needs a Groq key — add `VITE_GROQ_API_KEY=your_key` to `react/.env`.
       <sub>Chrome &amp; Acid · engine · landing</sub>
     </td>
     <td align="center">
-      <a href="https://github.com/coder404-hub">
-        <img src="https://github.com/coder404-hub.png" width="80" alt="@coder404-hub"><br>
+      <a href="https://github.com/ParthGupta-dev">
+        <img src="https://github.com/ParthGupta-dev.png" width="80" alt="@ParthGupta-dev"><br>
         <sub><b>@ParthGupta-dev</b></sub>
       </a><br>
       <sub>Frutiger Aero</sub>
