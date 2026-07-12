@@ -1,37 +1,77 @@
-import { Link } from 'react-router-dom';
-import { usePlayer } from '../../core/hooks';
+import { useRef, useState } from 'react';
 import './aero.css';
+import TopBar from './TopBar.jsx';
+import LeftNav from './LeftNav.jsx';
+import RightPanel from './RightPanel.jsx';
+import HomeView from './HomeView.jsx';
+import SearchView from './SearchView.jsx';
+import PlaylistView from './PlaylistView.jsx';
+import LibraryView from './LibraryView.jsx';
+import LyricsView from './LyricsView.jsx';
+import PlayerBar from './PlayerBar.jsx';
+import MixBuddy from './MixBuddy.jsx';
+import PremiumModal from './PremiumModal.jsx';
 
-export default function ThemeApp() {
-  const { current, isPlaying, toggle } = usePlayer();
+export default function ThemeApp(){
+  const [view, setView] = useState('home');
+  const [openMixIndex, setOpenMixIndex] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [toast, setToast] = useState({ msg: '', show: false });
+  const toastTimer = useRef(null);
+
+  function showToast(msg){
+    setToast({ msg, show: true });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 1800);
+  }
+
+  function navigate(v){
+    setView(v);
+    if(v === 'playlist') setOpenMixIndex(null);
+  }
+  function openMix(i){
+    setView('playlist');
+    setOpenMixIndex(i);
+  }
 
   return (
-    <div className="theme-aero-stub">
-      <div className="aero-stub-card">
-        <div className="aero-stub-banner">
-          <span>🛠️ UNDER CONSTRUCTION 🛠️</span>
-          <span>🛠️ UNDER CONSTRUCTION 🛠️</span>
-        </div>
-        <h1>Frutiger Aero</h1>
-        <p className="aero-stub-credit">built by Parth</p>
-        <p className="aero-stub-note">
-          Glossy blue-green gradients, glass reflections, water droplets,
-          bevels for days. Coming soon — see <code>THEME-GUIDE.md</code> in
-          this folder for the hooks this theme has access to.
-        </p>
-
-        <div className="aero-stub-now-playing">
-          <div className="aero-stub-label">now playing (shared player state)</div>
-          {current
-            ? <div className="aero-stub-track">{current.name} — {current.artist}</div>
-            : <div className="aero-stub-track dim">nothing yet</div>}
-          {current && (
-            <button className="aero-stub-btn" onClick={toggle}>{isPlaying ? 'Pause' : 'Play'}</button>
-          )}
-        </div>
-
-        <Link to="/" className="aero-stub-back">&larr; back to theme select</Link>
+    <div className="theme-aero">
+      <div className="aero-bubbles">
+        <span></span><span></span><span></span><span></span><span></span>
       </div>
+
+      <div className="app-shell">
+        <TopBar onSearchFocus={() => navigate('search')} onPremium={() => setShowModal(true)} />
+
+        <div className="app-grid-v2">
+          <LeftNav view={view} onNavigate={navigate} onOpenMix={openMix} />
+
+          <main className="main-glass">
+            {view === 'home' && <HomeView onGoto={navigate} onToast={showToast} />}
+            {view === 'search' && <SearchView />}
+            {view === 'playlist' && (
+              <PlaylistView
+                openMixIndex={openMixIndex}
+                onOpenMix={setOpenMixIndex}
+                onCloseMix={() => setOpenMixIndex(null)}
+              />
+            )}
+            {view === 'library' && <LibraryView />}
+            {view === 'lyrics' && <LyricsView />}
+          </main>
+
+          <RightPanel />
+        </div>
+      </div>
+
+      <PlayerBar onOpenLyrics={() => navigate('lyrics')} />
+      <MixBuddy />
+      <PremiumModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={() => { setShowModal(false); showToast("premium activated (not really, it's a prototype)"); }}
+      />
+      <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.msg}</div>
     </div>
   );
 }
