@@ -17,6 +17,7 @@
 
   position: relative;
   min-height: 100vh;
+  overflow-x: hidden;
   font-family: 'Segoe UI', 'Trebuchet MS', Verdana, sans-serif;
   background: url('/aero-sky-bg.jpg') center center / cover no-repeat fixed;
   color: #fff;
@@ -304,7 +305,7 @@
 
 /* Track rows (search / playlist / library) */
 .theme-aero .lib-row-v2 {
-  display: grid; grid-template-columns: 28px 34px 1fr 1fr auto 34px; gap: 10px; align-items: center;
+  display: grid; grid-template-columns: 28px 34px minmax(0,1fr) minmax(0,1fr) auto 34px; gap: 10px; align-items: center;
   padding: 8px 8px; cursor: pointer; border-radius: 8px; color: #fff;
 }
 .theme-aero .lib-row-v2:hover { background: rgba(255,255,255,.15); }
@@ -315,7 +316,7 @@
 .theme-aero .lib-row-v2 .t { font: bold 12px 'Segoe UI', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .theme-aero .lib-row-v2.active .t { color: var(--green-accent); }
 .theme-aero .lib-row-v2 .s { font: 10.5px 'Segoe UI', sans-serif; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.theme-aero .lib-row-v2 .album { font: 10.5px 'Segoe UI', sans-serif; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.theme-aero .lib-row-v2 .album { min-width: 0; font: 10.5px 'Segoe UI', sans-serif; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .theme-aero .lib-row-v2 .time { font: 10.5px 'Segoe UI', sans-serif; color: rgba(255,255,255,.7); display: flex; align-items: center; }
 .theme-aero .like-btn { all: unset; cursor: pointer; font-size: 15px; color: rgba(255,255,255,.5); transition: transform .2s; }
 .theme-aero .like-btn:hover { transform: scale(1.2); }
@@ -477,14 +478,57 @@
   .theme-aero .jump-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
 }
 @media (max-width: 760px) {
-  .theme-aero .app-grid-v2 { grid-template-columns: 1fr; }
-  .theme-aero .left-nav-v2 { position: static; flex-direction: row; }
-  .theme-aero .nav-glass { flex-direction: row; overflow-x: auto; }
+  .theme-aero .app-grid-v2 { grid-template-columns: minmax(0,1fr); }
+  .theme-aero .left-nav-v2 { position: static; flex-direction: row; min-width: 0; }
+  .theme-aero .nav-glass { flex-direction: row; overflow-x: auto; min-width: 0; }
+  .theme-aero .nav-glass button { flex: 0 0 auto; white-space: nowrap; padding: 8px 11px; font-size: 12px; }
   .theme-aero .playlists-glass { display: none; }
   .theme-aero .topbar-search { display: none; }
+
+  /* Topbar: shed the faux-desktop chrome that won't fit; let the rest wrap */
+  .theme-aero .topbar-v2 { flex-wrap: wrap; gap: 8px; }
+  .theme-aero .win-controls,
+  .theme-aero .nav-arrow[disabled],
+  .theme-aero .bell-btn { display: none; }
+
+  /* Roomier main panel */
+  .theme-aero .app-shell { padding: 10px 12px 160px; }
+  .theme-aero .main-glass { padding: 16px; gap: 18px; }
+  .theme-aero .hero-v2 h2 { font-size: 26px; }
+
+  /* Player bar: stack track-meta over transport, drop desktop-only volume/cast/fullscreen */
+  .theme-aero .playerbar-v2 {
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+    left: 8px; right: 8px; bottom: 8px; padding: 10px 12px;
+  }
+  .theme-aero .pb-right-v2 { display: none; }
+  .theme-aero .pb-center-v2 { width: 100%; }
+  .theme-aero .progress-row-v2 { max-width: none; }
+
+  /* Keep the floating buddy + toggle clear of the taller stacked player bar */
+  .theme-aero .buddy-toggle { bottom: 152px; right: 14px; }
+  .theme-aero .buddy-window {
+    bottom: 216px; right: 14px; width: min(300px, calc(100vw - 28px));
+  }
 }
 @media (max-width: 560px) {
   .theme-aero .jump-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .theme-aero .rank-row-head, .theme-aero .rank-row { grid-template-columns: 24px 1fr 60px; }
   .theme-aero .rank-row .plays { display: none; }
+
+  /* Squeeze the topbar down to brand + back + user so it holds one line */
+  .theme-aero .btn-upgrade-v2 { display: none; }
+  .theme-aero .topbar-brand span { font-size: 15px; }
+
+  /* Smaller heroes / titles */
+  .theme-aero .hero-v2 { gap: 12px; }
+  .theme-aero .hero-v2 img { width: 64px; height: 64px; }
+  .theme-aero .hero-v2 h2 { font-size: 22px; }
+  .theme-aero .page-title-v2 { font-size: 22px; }
+  .theme-aero .playlist-detail-hero-v2 { flex-wrap: wrap; }
+  .theme-aero .buddy-msgs { height: 160px; }
+
+  /* Track rows: drop the album column so nothing forces a wide row */
+  .theme-aero .lib-row-v2 { grid-template-columns: 22px 34px minmax(0,1fr) auto 28px; gap: 8px; }
+  .theme-aero .lib-row-v2 .album { display: none; }
 }
